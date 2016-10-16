@@ -17,12 +17,6 @@ newtype Coin color = Coin
 data Blue
 data Red
 
-createCoin :: color -> Int -> Coin color
-createCoin _ = Coin
-
-c1 = createCoin (undefined::Blue) 10
-c2 = Coin 5 :: Coin Red
-
 instance Monoid (Coin a) where
     mempty  = 0
     mappend = (+)

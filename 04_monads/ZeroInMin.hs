@@ -1,8 +1,8 @@
 module ZeroInMin where
 
-import           Data.Maybe(isJust)
-import           Data.List(find)
-import           Debug.Trace(trace)
+import           Data.List   (find)
+import           Data.Maybe  (isJust)
+import           Debug.Trace (trace)
 
 manHeaps :: (Int, Int) -> [(Int, Int)]
 manHeaps (a, b) = filter isCorrectHeaps
@@ -18,8 +18,8 @@ zeroIn3 h = any (\(a, b) -> a == 0 && b == 0) $
 
 zeroInMin :: (Int, Int) -> Int
 zeroInMin h = zeroInMinWithCounter [h] 0
-    where 
-        zeroInMinWithCounter arr cnt 
+    where
+        zeroInMinWithCounter arr cnt
             | (0, 0) `elem` arr = cnt
             | otherwise         = zeroInMinWithCounter (arr >>= manHeaps) (cnt + 1)
 
