@@ -1,6 +1,7 @@
 module Parser(Parser(..)) where
 
-import Control.Applicative(Alternative(..))
+import           Control.Applicative (Alternative (..))
+import           Control.Monad       (liftM)
 
 newtype Parser a = Parser
     { runParser :: String -> Maybe (a, String) }
@@ -14,16 +15,16 @@ second f (a, c) = (a, f c)
 instance Functor Parser where
     -- fmap :: (a -> b) -> Parser a -> Parser b
     fmap f (Parser run) = Parser run'
-        where run' s = run s >>= return . (first f)
+        where run' s = liftM (first f) $ run s
 
 instance Applicative Parser where
     -- pure :: a -> Parser a
     -- <*>  :: Parser (a -> b) -> Parser a -> Parser b
     pure v  = Parser $ \s -> Just (v, s)
     (Parser f) <*> (Parser a) = Parser run'
-        where 
-            run' s = 
-                f s   >>= \(fun, rem) -> 
+        where
+            run' s =
+                f s   >>= \(fun, rem) ->
                 a rem >>= \(val, rem') -> return (fun val, rem')
 
 
