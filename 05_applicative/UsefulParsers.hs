@@ -1,4 +1,11 @@
-module UsefulParsers where
+module UsefulParsers
+    ( satisfy
+    , char
+    , posInt
+    , zeroOrMore
+    , oneOrMore
+    , spaces
+    , ident ) where
 
 import           Control.Applicative (Alternative (..), liftA2)
 import           Data.Char           (isAlpha, isDigit, isSpace)
