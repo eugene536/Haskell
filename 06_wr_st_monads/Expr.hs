@@ -1,6 +1,6 @@
 module Expr where
 
-import           Control.Monad.Reader
+import           Control.Monad.Reader (Reader, asks, local, runReader)
 import           Data.Map.Strict      (Map, (!))
 import qualified Data.Map.Strict      as Map
 
