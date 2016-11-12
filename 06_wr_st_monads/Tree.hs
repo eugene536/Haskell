@@ -1,5 +1,4 @@
-module Bst where
-
+module Bst where 
 import           Control.Monad.Writer (Writer, execWriter, writer)
 import           TreePrinters         (Tree (..))
 import qualified TreePrinters

@@ -19,3 +19,4 @@ moving w arr = reverse resRev
 
 test1 = moving 4 [1, 5, 3, 8, 7, 9, 6]
 test2 = moving 2 [1, 5, 3, 8, 7, 9, 6]
+test3 = take 10 $ moving 1 [1..]
