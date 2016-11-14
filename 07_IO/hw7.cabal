@@ -20,6 +20,3 @@ executable hw7
                     containers,
                     split,
                     text
-  other-modules:    Parser, 
-                    UsefulParsers
-                       
