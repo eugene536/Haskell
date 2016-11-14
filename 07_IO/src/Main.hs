@@ -6,14 +6,15 @@
 module Main where
 
 import           Control.Applicative    (Alternative (..), liftA2, (*>), (<*))
+import           Control.Arrow          (second)
 import           Control.Exception      (Exception, SomeException, catch)
 import           Control.Exception.Base (throwIO)
 import           Data.IORef             (IORef, newIORef, readIORef, writeIORef)
 import           Data.Map.Strict        (Map, (!))
 import qualified Data.Map.Strict        as Map
 import           Data.Maybe             (fromJust)
-import           Data.Text              (Text, lines, pack, split, splitOn, strip,
-                                         unpack)
+import           Data.Monoid            ((<>))
+import           Data.Text              (Text, lines, pack, split, splitOn, strip, unpack)
 import qualified Data.Text              as T
 import           Data.Text.IO           (getLine, hGetContents, hPutStrLn, putStr,
                                          putStrLn)
@@ -23,8 +24,6 @@ import           System.Environment     (getArgs)
 import           System.IO              (Handle, IOMode (ReadMode, WriteMode), stdout,
                                          withFile)
 import           System.IO.Error        (isDoesNotExistError)
-import           Control.Arrow          (second)
-import           Data.Monoid            ((<>))
 
 data InvalidArgument = InvalidArgument Text
     deriving (Show, Typeable)
