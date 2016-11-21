@@ -5,30 +5,30 @@
 
 module Main where
 
-import           Control.Applicative    (Alternative (..), liftA2, (*>), (<*))
-import           Control.Arrow          (second)
-import           Control.Exception      (Exception, SomeException, catch)
-import           Control.Exception.Base (throwIO)
-import           Data.Char              (isSpace)
-import           Data.IORef             (IORef, newIORef, readIORef, writeIORef)
-import           Data.Map.Strict        (Map, (!))
-import qualified Data.Map.Strict        as Map
-import           Data.Maybe             (fromJust)
-import           Data.Monoid            ((<>))
-import           Data.Text              (Text, dropWhile, lines, pack, split, splitOn,
-                                         strip, takeWhile, unpack)
-import qualified Data.Text              as T
-import           Data.Text.IO           (getLine, hGetContents, hPutStrLn, putStr,
-                                         putStrLn)
-import           Data.Typeable          (Typeable)
-import           Prelude                hiding (dropWhile, getLine, lines, putStr,
-                                         putStrLn, takeWhile)
-import           System.Environment     (getArgs)
-import           System.IO              (Handle, IOMode (ReadMode, WriteMode), stdout,
-                                         withFile)
-import           System.IO.Error        (isDoesNotExistError)
-import           Control.Monad.Trans.Reader   (ReaderT(..), ask, local)
-import           Control.Monad.Trans.Class   (lift)
+import           Control.Applicative        (Alternative (..), liftA2, (*>), (<*))
+import           Control.Arrow              (second)
+import           Control.Exception          (Exception, SomeException, catch)
+import           Control.Exception.Base     (throwIO)
+import           Control.Monad.Trans.Class  (lift)
+import           Control.Monad.Trans.Reader (ReaderT (..), ask, local)
+import           Data.Char                  (isSpace)
+import           Data.IORef                 (IORef, newIORef, readIORef, writeIORef)
+import           Data.Map.Strict            (Map, (!))
+import qualified Data.Map.Strict            as Map
+import           Data.Maybe                 (fromJust)
+import           Data.Monoid                ((<>))
+import           Data.Text                  (Text, dropWhile, lines, pack, split, splitOn,
+                                             strip, takeWhile, unpack)
+import qualified Data.Text                  as T
+import           Data.Text.IO               (getLine, hGetContents, hPutStrLn, putStr,
+                                             putStrLn)
+import           Data.Typeable              (Typeable)
+import           Prelude                    hiding (dropWhile, getLine, lines, putStr,
+                                             putStrLn, takeWhile)
+import           System.Environment         (getArgs)
+import           System.IO                  (Handle, IOMode (ReadMode, WriteMode), stdout,
+                                             withFile)
+import           System.IO.Error            (isDoesNotExistError)
 
 data AbortLoop = AbortLoop
     deriving (Show, Typeable, Exception)
@@ -37,14 +37,14 @@ propertyParser :: ReaderT Text IO (Text, Text)
 propertyParser = do
     s <- ask
     let striped = strip s
-    let first_id = takeWhile (\x -> not $ (isSpace x) || (x == '=')) striped
-    let without_first = dropWhile (\x -> not $ (isSpace x) || (x == '=')) striped
+    let first_id = takeWhile (\x -> not $ isSpace x || x == '=') striped
+    let without_first = dropWhile (\x -> not $ isSpace x || x == '=') striped
     let second_id = strip (dropWhile (=='=') (strip without_first))
     return (first_id, first_id)
 
 type Config = Map Text (IO (IORef Text))
 
-readConfig :: ReaderT Handle IO Config 
+readConfig :: ReaderT Handle IO Config
 readConfig = do
     hFile <- ask
     content <- lift $ hGetContents hFile
@@ -57,7 +57,7 @@ readConfig = do
     lift $ putStrLn ""
 
     let ioArrayOfParams = sequence parsedParams
-    arrayOfParams <- lift $ ioArrayOfParams
+    arrayOfParams <- lift ioArrayOfParams
 
     return $ Map.fromList $ map (second newIORef) arrayOfParams
 
@@ -81,12 +81,12 @@ writeConfig :: Handle -> ReaderT Config IO ()
 writeConfig hFile = do
     config <- ask
     let lstConfig = Map.toList config :: [(Text, IO (IORef Text))]
-    lift $ 
+    lift $
         mapM_ (\(str, ioIoRef) -> do ioRef <- ioIoRef
                                      ref   <- readIORef ioRef
                                      hPutStrLn hFile (str <> " " <> ref)) lstConfig
 
-mainLoop :: ReaderT Config IO Config 
+mainLoop :: ReaderT Config IO Config
 mainLoop = do
     config <- ask
     lift $ putStrLn "Input property and value:"
@@ -99,7 +99,7 @@ mainLoop = do
             ask
         "B" -> do
             let prev_value_io_ref = config Map.! rhs
-            prev_value_ref <- lift $ prev_value_io_ref
+            prev_value_ref <- lift prev_value_io_ref
             prev_value <- lift $ readIORef prev_value_ref
 
             lift $ putStrLn ("Input new value for `" <> rhs <> "` property (previous: `" <> prev_value <> "`)")
@@ -110,7 +110,7 @@ mainLoop = do
             lift $ throwIO AbortLoop
         "S" -> do
             writeConfig stdout
-            mainLoop 
+            mainLoop
         otherwise -> do
             let nConfig = Map.insert lhs (newIORef rhs) config
             local (const nConfig) mainLoop
