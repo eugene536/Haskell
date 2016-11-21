@@ -1,7 +1,8 @@
-hoh hOOO
+hoh UUUUU
 hohoh IOIOI
 host localhost
 joks 123
 newV PPP
 port 8888
 puh uiui
+ui OOOOO

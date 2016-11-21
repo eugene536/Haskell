@@ -27,33 +27,37 @@ import           System.Environment     (getArgs)
 import           System.IO              (Handle, IOMode (ReadMode, WriteMode), stdout,
                                          withFile)
 import           System.IO.Error        (isDoesNotExistError)
+import           Control.Monad.Trans.Reader   (ReaderT(..), ask, local)
+import           Control.Monad.Trans.Class   (lift)
 
 data AbortLoop = AbortLoop
     deriving (Show, Typeable, Exception)
 
-propertyParser :: Text -> IO (Text, Text)
-propertyParser s = do
+propertyParser :: ReaderT Text IO (Text, Text)
+propertyParser = do
+    s <- ask
     let striped = strip s
     let first_id = takeWhile (\x -> not $ (isSpace x) || (x == '=')) striped
     let without_first = dropWhile (\x -> not $ (isSpace x) || (x == '=')) striped
     let second_id = strip (dropWhile (=='=') (strip without_first))
-    return (first_id, second_id)
+    return (first_id, first_id)
 
 type Config = Map Text (IO (IORef Text))
 
-readConfig :: Handle -> IO Config
-readConfig hFile = do
-    content <- hGetContents hFile
+readConfig :: ReaderT Handle IO Config 
+readConfig = do
+    hFile <- ask
+    content <- lift $ hGetContents hFile
     let params' = lines content
     let params  = filter (not . T.null) params'
-    let parsedParams = map propertyParser params
-    putStrLn ""
-    putStrLn "parsed content: "
-    mapM_ (>>= putStrLn . pack . show) parsedParams
-    putStrLn ""
+    let parsedParams = map (runReaderT propertyParser) params
+    lift $ putStrLn ""
+    lift $ putStrLn "parsed content: "
+    lift $ mapM_ (>>= putStrLn . pack . show) parsedParams
+    lift $ putStrLn ""
 
     let ioArrayOfParams = sequence parsedParams
-    arrayOfParams <- ioArrayOfParams
+    arrayOfParams <- lift $ ioArrayOfParams
 
     return $ Map.fromList $ map (second newIORef) arrayOfParams
 
@@ -73,56 +77,58 @@ printHeader = do
       \* S         : show current values\n"
     return ()
 
-writeConfig :: Config -> Handle -> IO ()
-writeConfig config hFile = do
+writeConfig :: Handle -> ReaderT Config IO ()
+writeConfig hFile = do
+    config <- ask
     let lstConfig = Map.toList config :: [(Text, IO (IORef Text))]
-    mapM_ (\(str, ioIoRef) -> do ioRef <- ioIoRef
-                                 ref   <- readIORef ioRef
-                                 hPutStrLn hFile (str <> " " <> ref)) lstConfig
+    lift $ 
+        mapM_ (\(str, ioIoRef) -> do ioRef <- ioIoRef
+                                     ref   <- readIORef ioRef
+                                     hPutStrLn hFile (str <> " " <> ref)) lstConfig
 
-mainLoop :: Config -> IO Config
-mainLoop config = do
-    putStrLn "Input property and value:"
-    propWIthValue <- getLine
-    (lhs, rhs) <- propertyParser propWIthValue
+mainLoop :: ReaderT Config IO Config 
+mainLoop = do
+    config <- ask
+    lift $ putStrLn "Input property and value:"
+    propWIthValue <- lift getLine
+    (lhs, rhs) <- lift $ runReaderT propertyParser propWIthValue
     case lhs of
         "W" -> do
-            putStrLn ""
-            putStrLn "Next properties are written:"
-            writeConfig config stdout
-            return config
+            lift $ putStrLn ""
+            lift $ putStrLn "Next properties are written:"
+            ask
         "B" -> do
             let prev_value_io_ref = config Map.! rhs
-            prev_value_ref <- prev_value_io_ref
-            prev_value <- readIORef prev_value_ref
+            prev_value_ref <- lift $ prev_value_io_ref
+            prev_value <- lift $ readIORef prev_value_ref
 
-            putStrLn ("Input new value for `" <> rhs <> "` property (previous: `" <> prev_value <> "`)")
-            newProp <- getLine
+            lift $ putStrLn ("Input new value for `" <> rhs <> "` property (previous: `" <> prev_value <> "`)")
+            newProp <- lift getLine
             let nConfig = Map.insert rhs (newIORef newProp) config
-            mainLoop nConfig
+            local (const nConfig) mainLoop
         "A" ->
-            throwIO AbortLoop
+            lift $ throwIO AbortLoop
         "S" -> do
-            writeConfig config stdout
-            mainLoop config
+            writeConfig stdout
+            mainLoop 
         otherwise -> do
             let nConfig = Map.insert lhs (newIORef rhs) config
-            mainLoop nConfig
+            local (const nConfig) mainLoop
 
 
-startInteractiveMode :: Config -> Handle -> IO ()
-startInteractiveMode config hFile = do
-    nConfig <- mainLoop config `catch` \(e :: SomeException) -> do
-               writeConfig config hFile
-               throwIO e
-    writeConfig nConfig hFile
-    return ()
+startInteractiveMode :: Handle -> ReaderT Config IO ()
+startInteractiveMode hFile = do
+    config <- ask
+    nConfig <- lift $ runReaderT mainLoop config `catch` \(e :: SomeException) -> do
+                          runReaderT (writeConfig hFile) config
+                          throwIO e
+    local (const nConfig) (writeConfig hFile)
 
 main :: IO ()
 main = do
     args <- getArgs
     let inFile = head args
     printHeader
-    mp <- withFile inFile ReadMode readConfig `catch` readHandler
-    withFile inFile WriteMode (startInteractiveMode mp)
+    mp <- withFile inFile ReadMode (runReaderT readConfig) `catch` readHandler
+    withFile inFile WriteMode (\h -> runReaderT (startInteractiveMode h) mp)
 
